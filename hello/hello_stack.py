@@ -1,8 +1,5 @@
 from aws_cdk import (
-    aws_iam as iam,
-    aws_sqs as sqs,
-    aws_sns as sns,
-    aws_sns_subscriptions as subs,
+    aws_ec2 as ec2,
     core
 )
 
@@ -14,18 +11,48 @@ class MyStack(core.Stack):
     def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        queue = sqs.Queue(
-            self, "MyFirstQueue",
-            visibility_timeout=core.Duration.seconds(300),
+        # Create the VPC
+
+        vpc = ec2.Vpc(self, "VPC", max_azs=1, cidr='10.0.0.0/16',
+                      subnet_configuration=[
+                          {
+                              'cidrMask': 24,
+                              'name': 'Ingress',
+                              'subnetType': ec2.SubnetType.PUBLIC,
+                          },
+                          {
+                              'cidrMask': 24,
+                              'name': 'Application',
+                              'subnetType': ec2.SubnetType.PRIVATE,
+                          }
+                      ]
         )
 
-        topic = sns.Topic(
-            self, "MyFirstTopic",
-            display_name="My First Topic"
-        )
+        publicsubnet = vpc.public_subnets[0].subnet_id
+        privatesubnet = vpc.private_subnets[0].subnet_id
 
-        topic.add_subscription(subs.SqsSubscription(queue))
+        publicinstancetags = [
+            core.CfnTag(key="Name", value="MyPublicLabHost"),
+            core.CfnTag(key="Project", value="lab"),
+            core.CfnTag(key="CostCenter", value="1520")
+        ]
 
-        hello = HelloConstruct(self, "MyHelloConstruct", num_buckets=4)
-        user = iam.User(self, "MyUser")
-        hello.grant_read(user)
+        privateinstancetags = [
+            core.CfnTag(key="Name", value="MyPrivateLabHost"),
+            core.CfnTag(key="Project", value="lab"),
+            core.CfnTag(key="CostCenter", value="1520")
+        ]
+
+        mypublicinstance = ec2.CfnInstance(self, 'MyPublicLabHost',
+                                     instance_type='t3.nano',
+                                     subnet_id=publicsubnet,
+                                     image_id=ec2.AmazonLinuxImage().get_image(self).image_id,
+                                     tags=publicinstancetags)
+
+        myprivateinstance = ec2.CfnInstance(self, 'MyPrivateLabHost',
+                                     instance_type='t3.nano',
+                                     subnet_id=privatesubnet,
+                                     image_id=ec2.AmazonLinuxImage().get_image(self).image_id,
+                                     tags=privateinstancetags)
+
+
