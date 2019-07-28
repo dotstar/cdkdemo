@@ -31,6 +31,7 @@ class MyStack(core.Stack):
         publicsubnet = vpc.public_subnets[0].subnet_id
         privatesubnet = vpc.private_subnets[0].subnet_id
 
+
         publicinstancetags = [
             core.CfnTag(key="Name", value="MyPublicLabHost"),
             core.CfnTag(key="Project", value="lab"),
@@ -54,5 +55,11 @@ class MyStack(core.Stack):
                                      subnet_id=privatesubnet,
                                      image_id=ec2.AmazonLinuxImage().get_image(self).image_id,
                                      tags=privateinstancetags)
+
+
+        iid = mypublicinstance.ref
+
+        eip = ec2.CfnEIP(self,'MyLabEip',domain='vpc',instance_id=iid)
+
 
 

@@ -6,6 +6,6 @@ from hello.hello_stack import MyStack
 
 
 app = core.App()
-MyStack(app, "hello-cdk-2", env={'region': 'us-east-2'})
+MyStack(app, "ehi-lab", env={'region': 'us-east-2'})
 
 app.synth()
